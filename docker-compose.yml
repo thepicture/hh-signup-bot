@@ -5,3 +5,6 @@ services:
       context: .
       dockerfile: Dockerfile
     image: playwright-docker
+    volumes:
+      - /src:/app/src
+      - /credentials:/app/credentials
