@@ -1,0 +1,5 @@
+const FETCH_TIMEOUT_MILLISECONDS = 5000;
+
+module.exports = {
+  FETCH_TIMEOUT_MILLISECONDS,
+};
