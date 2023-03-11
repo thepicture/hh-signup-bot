@@ -1,0 +1,21 @@
+{
+  "name": "hh-signup-bot",
+  "version": "1.0.0",
+  "description": "Sign ups a user into hh.ru platform",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "keywords": [],
+  "author": "thepicture",
+  "license": "ISC",
+  "dependencies": {
+    "playwright": "^1.31.2",
+    "playwright-extra": "^4.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
+    "random-name": "^0.1.2"
+  },
+  "devDependencies": {
+    "@trivago/prettier-plugin-sort-imports": "^4.1.1"
+  }
+}
