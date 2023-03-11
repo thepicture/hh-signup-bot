@@ -1,18 +1,18 @@
-const random = require("random-name");
-
 const fs = require("node:fs");
+
+const random = require("random-name");
 
 const { chromium } = require("playwright-extra");
 
+const stealth = require("puppeteer-extra-plugin-stealth")();
+
+const { ProxyBuilder } = require("./services/ProxyBuilder");
 const { Logger } = require("./services/Logger");
 const { PhoneGenerator } = require("./services/PhoneGenerator");
 const { CompanyGenerator } = require("./services/CompanyGenerator");
 
 const { EMAILNATOR_BASE_URL, HH_BASE_URL } = require("./config/urls");
 const { FETCH_TIMEOUT_MILLISECONDS } = require("./config/timeouts");
-const { ProxyBuilder } = require("./services/ProxyBuilder");
-
-const stealth = require("puppeteer-extra-plugin-stealth")();
 
 chromium.use(stealth);
 
