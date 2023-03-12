@@ -1,21 +1,46 @@
 const random = require("random-name");
 
+const fs = require("node:fs");
+
 const { chromium } = require("playwright-extra");
 
+const { Logger } = require("./services/Logger");
 const { PhoneGenerator } = require("./services/PhoneGenerator");
 const { CompanyGenerator } = require("./services/CompanyGenerator");
+
 const { EMAILNATOR_BASE_URL, HH_BASE_URL } = require("./config/urls");
-const { Logger } = require("./services/Logger");
 const { FETCH_TIMEOUT_MILLISECONDS } = require("./config/timeouts");
+const { ProxyBuilder } = require("./services/ProxyBuilder");
 
 const stealth = require("puppeteer-extra-plugin-stealth")();
 
 chromium.use(stealth);
 
-chromium.launch().then(async (browser) => {
+let launchOptions;
+
+const proxyBuilder = new ProxyBuilder();
+if (proxyBuilder.canProxyBuild()) {
+  launchOptions = proxyBuilder.buildProxy();
+  Logger.log("using proxy");
+} else {
+  launchOptions = {};
+  Logger.log("running with real ip");
+}
+
+chromium.launch(launchOptions).then(async (browser) => {
+  const start = Date.now();
+
   Logger.log("starting...");
 
   const page = await browser.newPage();
+
+  await page.route("**/*", (route) => {
+    return ["stylesheet", "image", "media", "font"].some(
+      (type) => route.request().resourceType() === type
+    )
+      ? route.abort()
+      : route.continue();
+  });
 
   await page.goto(`${EMAILNATOR_BASE_URL}/10minutemail`, {
     waitUntil: "domcontentloaded",
@@ -23,7 +48,7 @@ chromium.launch().then(async (browser) => {
   const email = await page.locator("input[readonly]").inputValue();
 
   if (!email) {
-    Logger.log("no image on the page, exiting");
+    Logger.log("email not found on the page, exiting");
 
     throw new Error("cannot find the email on the page");
   }
@@ -31,9 +56,14 @@ chromium.launch().then(async (browser) => {
   Logger.log("opening the auth page...");
 
   await page.goto(`${HH_BASE_URL}/auth/employer`, {
-    waitUntil: "networkidle",
+    waitUntil: "domcontentloaded",
   });
 
+  await page.waitForFunction(
+    () =>
+      !document.querySelector('[data-qa="employer-registration-submit"]')
+        ?.disabled
+  );
   Logger.log("submitting email...");
   await page.locator("#email").type(email);
   await page.locator('[data-qa="employer-registration-submit"]').click();
@@ -56,7 +86,7 @@ chromium.launch().then(async (browser) => {
     .type(new CompanyGenerator().generate().content);
   await page
     .locator('[data-qa="employer-registration-submit"]')
-    .click({ waitUntil: "networkidle" });
+    .click({ waitUntil: "domcontentloaded" });
   Logger.log("submitted company name");
 
   Logger.log("waiting 5 seconds before checking email...");
@@ -96,8 +126,22 @@ chromium.launch().then(async (browser) => {
   );
   Logger.log("fetched password");
 
-  Logger.log(`credentials: ${email}:${password}`);
+  const credentials = `${email}:${password}`;
+
+  Logger.log(`credentials: ${credentials}`);
+
+  try {
+    const path = `credentials/${Date.now()}`;
+
+    fs.writeFileSync(path, credentials, "utf-8");
+    Logger.log(`saved credentials to ${path}`);
+  } catch (error) {
+    Logger.log(`cannot save credentials: ${error}`);
+  }
 
   Logger.log("closing browser...");
   await browser.close();
+
+  const end = Date.now();
+  Logger.log(`execution took ${((end - start) / 1000).toFixed(2)}s`);
 });
